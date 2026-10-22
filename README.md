@@ -135,21 +135,46 @@ Use a throwaway folder, not your real Downloads:
 8. Windows only: create a shortcut or (with Developer Mode) a symlink in the folder and confirm it's listed as skipped.
 9. Interruption: put a few hundred files in the folder (for example by copying one file many times), start organizing and kill the app from Task Manager / `kill -9` while it runs. Restart TidyTray. It should say the previous cleanup was interrupted, and **Undo last cleanup** should put every moved file back.
 
-## Packaging a standalone app (optional)
+## Downloads (no Python needed)
 
-[PyInstaller](https://pyinstaller.org) builds a folder containing `TidyTray.exe`
-(Windows) or `TidyTray` (Linux) that runs without installing Python. Build on the
-OS you are targeting; PyInstaller does not cross-compile.
+Ready-made packages are on the [Releases page](https://github.com/HyderJavaid/tidytray/releases):
+
+| File | What it is |
+| --- | --- |
+| `TidyTray-<version>-windows-setup.exe` | Windows installer. Installs for your user only (no administrator rights), adds a Start menu entry, uninstall from *Settings → Apps*. |
+| `TidyTray-<version>-windows-x64-portable.zip` | Windows portable. Unzip anywhere, run `TidyTray\TidyTray.exe`. |
+| `tidytray_<version>_amd64.deb` | Linux installer for Debian/Ubuntu/Mint: `sudo apt install ./tidytray_<version>_amd64.deb`, then open TidyTray from the app menu or run `tidytray`. |
+| `TidyTray-<version>-linux-x86_64-portable.tar.gz` | Linux portable. `tar -xzf` it anywhere and run `TidyTray/TidyTray`. |
+
+The apps aren't code-signed, so Windows SmartScreen may warn the first time: choose *More info → Run anyway*.
+The portable builds still keep history and settings in your user data folder (see "Where the history lives").
+
+## Building the packages yourself
+
+The GitHub Actions workflow `.github/workflows/release.yml` builds all four files, runs the tests first, starts
+each built app to check it launches, and silently installs and uninstalls the Windows installer. Push a tag
+(`git tag v1.0.1 && git push origin v1.0.1`) or run the **release** workflow from the Actions tab to publish a
+release. Bump `__version__` in `tidytray/__init__.py` first.
+
+To build locally, you need [PyInstaller](https://pyinstaller.org); build on the OS you are targeting.
+
+**Linux** (needs `dpkg-deb`, present on Debian/Ubuntu):
 
 ```bash
-python -m pip install pyinstaller
-pyinstaller --noconfirm --windowed --name TidyTray run_tidytray.py
+source .venv/bin/activate
+python -m pip install -r requirements.txt pyinstaller
+bash packaging/build_linux.sh
 ```
 
-The result is in `dist/TidyTray/`. Zip that whole folder to share it.
+**Windows** (the installer step needs [Inno Setup 6](https://jrsoftware.org/isdl.php), e.g. `winget install JRSoftware.InnoSetup`):
 
-- **Windows:** run `dist\TidyTray\TidyTray.exe`. Windows SmartScreen may warn about an unsigned app the first time; choose "More info", then "Run anyway".
-- **Linux:** run `dist/TidyTray/TidyTray`. To get a menu entry, install the package with `python -m pip install .` (this creates a `tidytray` command) and copy `packaging/tidytray.desktop` to `~/.local/share/applications/`.
+```powershell
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt pyinstaller
+.\packaging\build_windows.ps1
+```
+
+Both put their output in `dist/`. `packaging/make_icons.py` regenerates `tidytray.png` / `tidytray.ico` from the icon drawn in code.
 
 ## Project layout
 
@@ -167,7 +192,7 @@ tidytray/
   settings.py            Remembered preferences (theme)
   ui/                    PySide6 window, light/dark themes, icons drawn in code
 tests/                   pytest suite (temporary folders only)
-packaging/               Linux .desktop file
+packaging/               Build scripts, Inno Setup script, icons, Linux .desktop file
 ```
 
 To change which extensions go where, edit the lists in `tidytray/categories.py`.

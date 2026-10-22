@@ -3,6 +3,6 @@ Type=Application
 Name=TidyTray
 Comment=Safely organize your Downloads folder
 Exec=tidytray
-Icon=folder-downloads
+Icon=tidytray
 Terminal=false
 Categories=Utility;FileTools;

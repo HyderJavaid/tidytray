@@ -1,0 +1,134 @@
+name: release
+
+# Builds downloadable packages:
+#   Linux:   portable .tar.gz and .deb installer
+#   Windows: portable .zip and setup .exe installer (per-user, no admin)
+# Every run keeps them as workflow artifacts. Pushing a tag like v1.0.0 (or
+# running this workflow by hand with "publish" ticked) also attaches them to a
+# GitHub Release.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Also publish a GitHub Release (tag v<version from tidytray/__init__.py>)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    # Oldest supported runner, so the build works on older distributions too.
+    runs-on: ubuntu-22.04
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Qt system libraries
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3
+      - name: Install Python packages
+        run: python -m pip install -r requirements-dev.txt pyinstaller
+      - name: Run tests
+        run: python -m pytest -q
+      - name: Build portable archive and .deb
+        run: bash packaging/build_linux.sh
+      - name: Smoke test the built app
+        run: |
+          mkdir -p smoke && tar -C smoke -xzf dist/TidyTray-*-linux-x86_64-portable.tar.gz
+          code=0; timeout 10 smoke/TidyTray/TidyTray || code=$?
+          # 124 = still running when the timeout stopped it, i.e. it started fine.
+          test $code -eq 124
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tidytray-linux
+          path: |
+            dist/*.tar.gz
+            dist/*.deb
+
+  windows:
+    runs-on: windows-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python packages
+        run: python -m pip install -r requirements-dev.txt pyinstaller
+      - name: Run tests
+        run: python -m pytest -q
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --no-progress -y }
+      - name: Build portable zip and installer
+        shell: pwsh
+        run: .\packaging\build_windows.ps1
+      - name: Smoke test the built app
+        shell: pwsh
+        run: |
+          $p = Start-Process dist\TidyTray\TidyTray.exe -PassThru
+          Start-Sleep -Seconds 10
+          if ($p.HasExited) { throw "TidyTray.exe exited early with code $($p.ExitCode)" }
+          Stop-Process -Id $p.Id
+      - name: Test the installer (silent install, launch, uninstall)
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dist\TidyTray-*-windows-setup.exe | Select-Object -First 1
+          Start-Process $setup.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          $exe = "$env:LOCALAPPDATA\Programs\TidyTray\TidyTray.exe"
+          if (-not (Test-Path $exe)) { throw "Installer did not place $exe" }
+          $p = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 10
+          if ($p.HasExited) { throw "Installed TidyTray exited early with code $($p.ExitCode)" }
+          Stop-Process -Id $p.Id
+          Start-Process "$env:LOCALAPPDATA\Programs\TidyTray\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES" -Wait
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tidytray-windows
+          path: |
+            dist/*.zip
+            dist/*-setup.exe
+
+  publish:
+    needs: [linux, windows]
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Work out the release tag
+        id: tag
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v$(python3 -c 'import tidytray; print(tidytray.__version__)')" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: TidyTray ${{ steps.tag.outputs.tag }}
+          files: artifacts/*
+          body: |
+            **Windows**
+            - `TidyTray-…-windows-setup.exe`: installer. Installs for your user only (no administrator rights), adds a Start menu entry, and can be removed from *Settings → Apps*.
+            - `TidyTray-…-windows-x64-portable.zip`: unzip anywhere and run `TidyTray\TidyTray.exe`. Nothing is installed.
+
+            Windows SmartScreen may warn because the app isn't code-signed. Choose *More info → Run anyway*.
+
+            **Linux (x86_64)**
+            - `tidytray_…_amd64.deb`: installer for Debian, Ubuntu, Mint and similar: `sudo apt install ./tidytray_…_amd64.deb`, then start TidyTray from the app menu or run `tidytray`.
+            - `TidyTray-…-linux-x86_64-portable.tar.gz`: extract anywhere and run `TidyTray/TidyTray`. No root needed.
