@@ -136,3 +136,31 @@ def test_startup_recovery_message(app, window, downloads, history):
     window.recover_interrupted()
     assert window.messages[-1][0] == "Previous cleanup was interrupted"
     assert window.undo_button.isEnabled()
+
+
+def test_theme_switch_light_dark_system_and_remembered(app, window, downloads, isolated_data_dir):
+    from tidytray import settings
+    from tidytray.ui import theme
+
+    make(downloads, "a.jpg")
+    window.load_folder(downloads)
+    settle(app)
+    window.set_theme(theme.LIGHT)
+    assert theme.active_scheme() == theme.LIGHT
+    assert app.palette().color(app.palette().ColorRole.Window).lightness() > 200
+    assert settings.load()["theme"] == theme.LIGHT
+    window.set_theme(theme.DARK)
+    assert theme.active_scheme() == theme.DARK
+    assert app.palette().color(app.palette().ColorRole.Window).lightness() < 60
+    window.set_theme(theme.SYSTEM)
+    assert theme.active_scheme() in (theme.LIGHT, theme.DARK)
+    assert settings.load()["theme"] == theme.SYSTEM
+
+    window.set_theme(theme.DARK)
+    second = MainWindow(history=window.history)
+    try:
+        assert second.theme_mode == theme.DARK
+        assert second.theme_buttons[theme.DARK].isChecked()
+    finally:
+        second.close()
+        second.deleteLater()

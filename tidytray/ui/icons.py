@@ -8,7 +8,7 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QPolygonF
 
 from ..categories import ARCHIVES, AUDIO, CODE, DOCUMENTS, IMAGES, INSTALLERS, VIDEOS
-from .theme import ACCENT, CATEGORY_COLORS, MUTED
+from .theme import active_scheme, category_color, color
 
 
 def _canvas(size: int) -> tuple[QPixmap, QPainter]:
@@ -78,30 +78,40 @@ def _draw_glyph(p: QPainter, category: str, color: QColor) -> None:
             p.drawEllipse(QPointF(x, 12), 1.6, 1.6)
 
 
-@lru_cache(maxsize=None)
 def category_pixmap(category: str, size: int = 32) -> QPixmap:
-    color = QColor(CATEGORY_COLORS.get(category, MUTED))
+    return _category_pixmap(category, size, active_scheme())
+
+
+@lru_cache(maxsize=None)
+def _category_pixmap(category: str, size: int, scheme: str) -> QPixmap:
+    glyph = QColor(category_color(category))
     pixmap, p = _canvas(size)
-    tint = QColor(color)
+    tint = QColor(glyph)
     tint.setAlpha(40)
     p.setPen(Qt.NoPen)
     p.setBrush(QBrush(tint))
     p.drawRoundedRect(QRectF(0.5, 0.5, 23, 23), 6.5, 6.5)
-    _draw_glyph(p, category, color)
+    _draw_glyph(p, category, glyph)
     p.end()
     return pixmap
 
 
 def category_icon(category: str) -> QIcon:
+    return _category_icon(category, active_scheme())
+
+
+@lru_cache(maxsize=None)
+def _category_icon(category: str, scheme: str) -> QIcon:
     icon = QIcon()
     for size in (16, 20, 24, 32, 48):
         icon.addPixmap(category_pixmap(category, size))
     return icon
 
 
-def nav_icon(kind: str, color: str = MUTED, size: int = 20) -> QIcon:
+def nav_icon(kind: str, role: str = "muted", size: int = 20) -> QIcon:
+    """A line icon drawn in the current theme's ``role`` color ("text" or "muted")."""
     pixmap, p = _canvas(size)
-    c = QColor(color)
+    c = QColor(color(role))
     p.setPen(_pen(c, 1.9))
     if kind == "overview":
         for x, y in ((4.5, 4.5), (13, 4.5), (4.5, 13), (13, 13)):
@@ -158,7 +168,7 @@ def app_icon() -> QIcon:
 def app_pixmap(size: int = 64) -> QPixmap:
     pixmap, p = _canvas(size)
     p.setPen(Qt.NoPen)
-    p.setBrush(QColor(ACCENT))
+    p.setBrush(QColor(color("accent")))
     p.drawRoundedRect(QRectF(1, 1, 22, 22), 6, 6)
     white = QColor("white")
     p.setPen(_pen(white, 1.9))

@@ -75,6 +75,8 @@ platform plugin, install the usual Qt runtime packages:
 
 Keyboard shortcuts: Ctrl+O choose folder, F5 rescan, Ctrl+Z undo last cleanup.
 
+**Appearance:** the switch at the bottom of the sidebar picks **System** (follow your desktop's dark/light setting, the default), **Light** or **Dark**. Your choice is remembered in `settings.json` next to the history folder.
+
 ## Safety details
 
 | Situation | What TidyTray does |
@@ -162,7 +164,8 @@ tidytray/
   history.py             Local append-only journal, crash recovery
   safety.py              Refuse system folders, drive roots and the home folder
   paths.py               Per-user data folder
-  ui/                    PySide6 window, dark theme, icons drawn in code
+  settings.py            Remembered preferences (theme)
+  ui/                    PySide6 window, light/dark themes, icons drawn in code
 tests/                   pytest suite (temporary folders only)
 packaging/               Linux .desktop file
 ```

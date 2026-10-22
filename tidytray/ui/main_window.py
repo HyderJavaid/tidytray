@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QThreadPool, Qt, QUrl
-from PySide6.QtGui import QColor, QDesktopServices, QFontMetrics, QKeySequence, QShortcut
+from PySide6.QtGui import QColor, QDesktopServices, QFontMetrics, QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QButtonGroup,
     QFileDialog,
     QFrame,
@@ -38,7 +39,8 @@ from ..safety import unsafe_reason
 from ..scanner import ScanResult, scan_folder
 from .icons import app_pixmap, category_icon, category_pixmap, nav_icon
 from .models import FileFilterProxy, FileTableModel
-from .theme import MUTED, TEXT, WARNING
+from .. import settings
+from .theme import DARK, LIGHT, SYSTEM, apply_theme, color
 from .widgets import CategoryCard, EmptyState, PageHeader, label
 from .workers import Task
 
@@ -60,9 +62,11 @@ def _list_details(rows: list[tuple[Path, str]], limit: int = 200) -> str:
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, history: History | None = None):
+    def __init__(self, history: History | None = None, theme_mode: str | None = None):
         super().__init__()
         self.history = history or History()
+        mode = theme_mode or settings.load().get("theme", SYSTEM)
+        self.theme_mode = mode if mode in (SYSTEM, LIGHT, DARK) else SYSTEM
         self.scan_result: ScanResult | None = None
         self.plan: Plan | None = None
         self.task: Task | None = None
@@ -97,6 +101,11 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence.Refresh, self, activated=self.rescan)
         QShortcut(QKeySequence.Undo, self, activated=self.undo_last)
 
+        hints = QGuiApplication.styleHints()
+        if hasattr(hints, "colorSchemeChanged"):
+            hints.colorSchemeChanged.connect(self._on_system_scheme_changed)
+
+        self.set_theme(self.theme_mode, save=False)
         self.show_page(PAGE_OVERVIEW)
         self.refresh_history()
         self._update_overview()
@@ -129,7 +138,8 @@ class MainWindow(QMainWindow):
         for index, (text, icon) in enumerate((("Overview", "overview"), ("Review plan", "plan"), ("History", "history"))):
             btn = QPushButton(f"  {text}")
             btn.setObjectName("NavButton")
-            btn.setIcon(nav_icon(icon, TEXT))
+            btn.setIcon(nav_icon(icon, "text"))
+            btn.setProperty("iconKind", icon)
             btn.setCheckable(True)
             btn.setCursor(Qt.PointingHandCursor)
             btn.clicked.connect(lambda _=False, i=index: self.show_page(i))
@@ -138,8 +148,29 @@ class MainWindow(QMainWindow):
             layout.addWidget(btn)
 
         layout.addStretch(1)
+        layout.addWidget(label("APPEARANCE", "SidebarCaption"))
+        layout.addSpacing(4)
+        segments = QHBoxLayout()
+        segments.setSpacing(0)
+        self.theme_group = QButtonGroup(self)
+        self.theme_group.setExclusive(True)
+        self.theme_buttons: dict[str, QPushButton] = {}
+        for i, (mode, text) in enumerate(((SYSTEM, "System"), (LIGHT, "Light"), (DARK, "Dark"))):
+            btn = QPushButton(text)
+            btn.setObjectName("SegmentButton")
+            btn.setCheckable(True)
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setProperty("first", i == 0)
+            btn.setProperty("last", i == 2)
+            btn.setToolTip("Follow your system's dark or light setting" if mode == SYSTEM else f"Always use the {text.lower()} theme")
+            btn.clicked.connect(lambda _=False, m=mode: self.set_theme(m))
+            self.theme_group.addButton(btn)
+            self.theme_buttons[mode] = btn
+            segments.addWidget(btn)
+        layout.addLayout(segments)
+        layout.addSpacing(16)
         self.undo_button = QPushButton("  Undo last cleanup")
-        self.undo_button.setIcon(nav_icon("undo", TEXT))
+        self.undo_button.setProperty("iconKind", "undo")
         self.undo_button.setCursor(Qt.PointingHandCursor)
         self.undo_button.clicked.connect(self.undo_last)
         layout.addWidget(self.undo_button)
@@ -164,11 +195,12 @@ class MainWindow(QMainWindow):
         page, layout = self._page()
         self.overview_header = PageHeader("Overview", "No folder selected")
         self.choose_button = QPushButton("  Choose folder…")
-        self.choose_button.setIcon(nav_icon("folder", TEXT))
+        self.choose_button.setProperty("iconKind", "folder")
         self.choose_button.clicked.connect(self.choose_folder)
         self.rescan_button = QPushButton("  Rescan")
         self.rescan_button.setObjectName("GhostButton")
-        self.rescan_button.setIcon(nav_icon("refresh", MUTED))
+        self.rescan_button.setProperty("iconKind", "refresh")
+        self.rescan_button.setProperty("iconRole", "muted")
         self.rescan_button.clicked.connect(self.rescan)
         self.overview_header.actions.addWidget(self.rescan_button)
         self.overview_header.actions.addWidget(self.choose_button)
@@ -178,7 +210,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.overview_stack, 1)
 
         empty = EmptyState(
-            app_pixmap(72),
+            lambda: app_pixmap(72),
             "Choose a folder to tidy",
             "TidyTray looks only at the files directly inside the folder you pick. "
             "It shows you a plan first, and nothing moves until you confirm.",
@@ -270,7 +302,7 @@ class MainWindow(QMainWindow):
         self.table_stack.addWidget(self.table)
         self.table_stack.addWidget(
             EmptyState(
-                category_pixmap("Other", 56),
+                lambda: category_pixmap("Other", 56),
                 "All tidy",
                 "There are no loose files directly inside this folder. Files already in subfolders are left as they are.",
             )
@@ -298,7 +330,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.plan_stack, 1)
 
         empty = EmptyState(
-            category_pixmap("Other", 72),
+            lambda: category_pixmap("Other", 72),
             "No plan yet",
             "Choose a folder, tick the files you want to tidy, then press “Review cleanup plan”.",
         )
@@ -343,7 +375,7 @@ class MainWindow(QMainWindow):
         w = QHBoxLayout(self.plan_warning)
         w.setContentsMargins(14, 10, 14, 10)
         self.plan_warning_label = label("", wrap=True)
-        self.plan_warning_label.setStyleSheet(f"color: {WARNING};")
+        self.plan_warning_label.setObjectName("WarningText")
         w.addWidget(self.plan_warning_label, 1)
         details = QPushButton("Details")
         details.setObjectName("GhostButton")
@@ -378,7 +410,7 @@ class MainWindow(QMainWindow):
         self.history_stack = QStackedWidget()
         layout.addWidget(self.history_stack, 1)
         self.history_stack.addWidget(
-            EmptyState(nav_icon("history", MUTED, 72).pixmap(72, 72), "No cleanups yet", "When you organize a folder, it will be listed here.")
+            EmptyState(lambda: nav_icon("history", "muted", 72).pixmap(72, 72), "No cleanups yet", "When you organize a folder, it will be listed here.")
         )
 
         content = QWidget()
@@ -435,6 +467,36 @@ class MainWindow(QMainWindow):
         if details:
             box.setDetailedText(details)
         box.exec()
+
+    # ---------------------------------------------------------------- theme
+    def set_theme(self, mode: str, save: bool = True) -> None:
+        """Switch between "system", "light" and "dark" and remember the choice."""
+        self.theme_mode = mode
+        self.theme_buttons[mode].setChecked(True)
+        apply_theme(QApplication.instance(), mode)
+        if save:
+            settings.save(theme=mode)
+        self._retheme()
+
+    def _on_system_scheme_changed(self, *_args) -> None:
+        if self.theme_mode == SYSTEM:
+            self.set_theme(SYSTEM, save=False)
+
+    def _retheme(self) -> None:
+        """Redraw everything that is painted in code rather than styled."""
+        for button in self.findChildren(QPushButton):
+            kind = button.property("iconKind")
+            if kind:
+                button.setIcon(nav_icon(kind, button.property("iconRole") or "text"))
+        for card in self.cards.values():
+            card.refresh_icon()
+        for empty in self.findChildren(EmptyState):
+            empty.refresh_icon()
+        if self._category_filter:
+            self.filter_chip.setIcon(category_icon(self._category_filter))
+        self.model.layoutChanged.emit()
+        self._update_plan_page()
+        self.refresh_history()
 
     # ------------------------------------------------------------ navigation
     def show_page(self, index: int) -> None:
@@ -644,7 +706,7 @@ class MainWindow(QMainWindow):
         by_category: dict[str, list] = {}
         for move in plan.moves:
             by_category.setdefault(move.category, []).append(move)
-        warn = QColor(WARNING)
+        warn = QColor(color("warning"))
         for category in folders:
             moves = by_category[category]
             parent = QTreeWidgetItem([category, f"{category}/", f"{plural(len(moves), 'file')}"])
@@ -652,8 +714,8 @@ class MainWindow(QMainWindow):
             font = parent.font(0)
             font.setBold(True)
             parent.setFont(0, font)
-            parent.setForeground(1, QColor(MUTED))
-            parent.setForeground(2, QColor(MUTED))
+            parent.setForeground(1, QColor(color("muted")))
+            parent.setForeground(2, QColor(color("muted")))
             parent.setTextAlignment(2, Qt.AlignRight | Qt.AlignVCenter)
             for move in moves:
                 child = QTreeWidgetItem([move.source.name, f"{category}/{move.destination.name}", human_size(move.size)])
@@ -812,7 +874,7 @@ class MainWindow(QMainWindow):
                 item.setText(3, f"{status} · can undo")
             if op.undone:
                 for col in range(4):
-                    item.setForeground(col, QColor(MUTED))
+                    item.setForeground(col, QColor(color("muted")))
             self.history_tree.addTopLevelItem(item)
         self.history_stack.setCurrentIndex(1 if ops else 0)
         self.history_hint.setText(f"History is stored only on this computer, in {self.history.directory}")

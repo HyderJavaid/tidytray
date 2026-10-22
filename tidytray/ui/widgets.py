@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Callable
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
@@ -37,9 +39,9 @@ class CategoryCard(QFrame):
         self.setMinimumHeight(96)
         self.setToolTip(f"Show only {category.lower()} in the table")
 
-        icon = QLabel()
-        icon.setPixmap(category_pixmap(category, 30))
+        self.icon = icon = QLabel()
         icon.setFixedSize(30, 30)
+        self.refresh_icon()
         title = label(category, "CardTitle")
         top = QHBoxLayout()
         top.setSpacing(10)
@@ -59,6 +61,9 @@ class CategoryCard(QFrame):
         layout.addLayout(top)
         layout.addLayout(bottom)
         self.set_stats(0, 0)
+
+    def refresh_icon(self) -> None:
+        self.icon.setPixmap(category_pixmap(self.category, 30))
 
     def set_stats(self, count: int, size: int) -> None:
         self.count_label.setText(str(count))
@@ -80,14 +85,15 @@ class CategoryCard(QFrame):
 class EmptyState(QWidget):
     """A friendly centered message with optional action buttons."""
 
-    def __init__(self, pixmap: QPixmap, title: str, body: str, parent=None):
+    def __init__(self, pixmap: Callable[[], QPixmap], title: str, body: str, parent=None):
         super().__init__(parent)
+        self._pixmap = pixmap
         layout = QVBoxLayout(self)
         layout.addStretch(1)
-        icon = QLabel()
-        icon.setPixmap(pixmap)
-        icon.setAlignment(Qt.AlignCenter)
-        layout.addWidget(icon)
+        self.icon = QLabel()
+        self.icon.setAlignment(Qt.AlignCenter)
+        self.refresh_icon()
+        layout.addWidget(self.icon)
         layout.addSpacing(12)
         t = label(title, "SectionTitle")
         t.setAlignment(Qt.AlignCenter)
@@ -108,6 +114,10 @@ class EmptyState(QWidget):
         self.buttons.addStretch(1)
         layout.addLayout(self.buttons)
         layout.addStretch(2)
+
+    def refresh_icon(self) -> None:
+        """Redraw the picture in the current theme's colors."""
+        self.icon.setPixmap(self._pixmap())
 
     def add_button(self, button: QPushButton) -> QPushButton:
         self.buttons.insertWidget(self.buttons.count() - 1, button)

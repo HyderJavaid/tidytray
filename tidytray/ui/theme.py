@@ -1,4 +1,4 @@
-"""Dark theme: colors and the application style sheet."""
+"""Standard dark and light themes (plus "follow the system"), and the style sheet."""
 
 from __future__ import annotations
 
@@ -6,56 +6,146 @@ import tempfile
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, Qt
-from PySide6.QtGui import QColor, QFont, QPainter, QPalette, QPen, QPixmap, QPolygonF
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPalette, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import QApplication
 
-from ..paths import data_dir
 from ..categories import ARCHIVES, AUDIO, CODE, DOCUMENTS, IMAGES, INSTALLERS, OTHER, VIDEOS
+from ..paths import data_dir
 
-BG = "#0f1218"
-SIDEBAR = "#141922"
-SURFACE = "#1a202a"
-SURFACE_2 = "#222936"
-SURFACE_3 = "#2a3242"
-BORDER = "#2a3140"
-TEXT = "#e7eaf0"
-MUTED = "#8c96a8"
-ACCENT = "#5b8cff"
-ACCENT_HOVER = "#759fff"
-ACCENT_PRESSED = "#4876e6"
-SUCCESS = "#3ecf8e"
-WARNING = "#f5b84a"
-DANGER = "#f2667a"
+SYSTEM, LIGHT, DARK = "system", "light", "dark"
+MODES = (SYSTEM, LIGHT, DARK)
 
-CATEGORY_COLORS = {
-    IMAGES: "#c084fc",
-    DOCUMENTS: "#60a5fa",
-    VIDEOS: "#f87171",
-    AUDIO: "#34d399",
-    ARCHIVES: "#fbbf24",
-    INSTALLERS: "#fb923c",
-    CODE: "#22d3ee",
-    OTHER: "#94a3b8",
+# Neutral grays with a standard blue accent, close to the stock Windows and
+# GNOME/KDE dark and light looks.
+PALETTES: dict[str, dict[str, str]] = {
+    DARK: {
+        "bg": "#1e1e1e",
+        "sidebar": "#252525",
+        "surface": "#2b2b2b",
+        "surface_2": "#333333",
+        "surface_3": "#3f3f3f",
+        "border": "#3a3a3a",
+        "text": "#ececec",
+        "muted": "#a6a6a6",
+        "disabled": "#6e6e6e",
+        "accent": "#0a6fd1",
+        "accent_hover": "#1f80dd",
+        "accent_pressed": "#085fb3",
+        "alt_row": "#2f2f2f",
+        "selection": "#474747",
+        "card_selected": "#353535",
+        "banner": "#2b2b2b",
+        "banner_border": "#4a4a4a",
+        "warning": "#e5a50a",
+        "warning_bg": "#3a3220",
+        "warning_border": "#6b5a2a",
+        "indicator_border": "#6a6a6a",
+        "primary_disabled": "#3a3a3a",
+        "primary_disabled_text": "#8a8a8a",
+    },
+    LIGHT: {
+        "bg": "#f5f5f5",
+        "sidebar": "#ebebeb",
+        "surface": "#ffffff",
+        "surface_2": "#f0f0f0",
+        "surface_3": "#e2e2e2",
+        "border": "#d4d4d4",
+        "text": "#1c1c1c",
+        "muted": "#5c5c5c",
+        "disabled": "#a3a3a3",
+        "accent": "#0a6fd1",
+        "accent_hover": "#1f80dd",
+        "accent_pressed": "#085fb3",
+        "alt_row": "#f8f8f8",
+        "selection": "#e3e3e3",
+        "card_selected": "#f0f0f0",
+        "banner": "#ffffff",
+        "banner_border": "#cfcfcf",
+        "warning": "#9a6700",
+        "warning_bg": "#fff6dc",
+        "warning_border": "#ecd18a",
+        "indicator_border": "#8f8f8f",
+        "primary_disabled": "#d2d2d2",
+        "primary_disabled_text": "#f7f7f7",
+    },
 }
 
-STYLE_SHEET = f"""
+CATEGORY_COLORS: dict[str, dict[str, str]] = {
+    DARK: {
+        IMAGES: "#c084fc",
+        DOCUMENTS: "#60a5fa",
+        VIDEOS: "#f87171",
+        AUDIO: "#34d399",
+        ARCHIVES: "#fbbf24",
+        INSTALLERS: "#fb923c",
+        CODE: "#22d3ee",
+        OTHER: "#a3a3a3",
+    },
+    LIGHT: {
+        IMAGES: "#9333ea",
+        DOCUMENTS: "#2563eb",
+        VIDEOS: "#dc2626",
+        AUDIO: "#059669",
+        ARCHIVES: "#b45309",
+        INSTALLERS: "#c2410c",
+        CODE: "#0e7490",
+        OTHER: "#6b6b6b",
+    },
+}
+
+_active = DARK
+_desktop_window_lightness: int | None = None  # the desktop's own palette, before we restyle
+
+
+def active_scheme() -> str:
+    """The scheme in use right now: ``"dark"`` or ``"light"``."""
+    return _active
+
+
+def color(name: str) -> str:
+    return PALETTES[_active][name]
+
+
+def category_color(category: str) -> str:
+    return CATEGORY_COLORS[_active].get(category, color("muted"))
+
+
+def system_scheme() -> str:
+    """Ask the desktop whether it prefers dark or light (Qt 6.5+), else guess from its palette."""
+    hints = QGuiApplication.styleHints()
+    scheme = getattr(hints, "colorScheme", lambda: None)()
+    if scheme == getattr(Qt.ColorScheme, "Dark", object()):
+        return DARK
+    if scheme == getattr(Qt.ColorScheme, "Light", object()):
+        return LIGHT
+    lightness = _desktop_window_lightness
+    if lightness is None:
+        lightness = QGuiApplication.palette().color(QPalette.Window).lightness()
+    return DARK if lightness < 128 else LIGHT
+
+
+def resolve(mode: str) -> str:
+    return system_scheme() if mode not in (LIGHT, DARK) else mode
+
+
+STYLE_TEMPLATE = """
 * {{
-    color: {TEXT};
+    color: {text};
     outline: 0;
 }}
 QMainWindow, QWidget#Content, QStackedWidget, QWidget#Page {{
-    background: {BG};
+    background: {bg};
 }}
 QFrame#Sidebar {{
-    background: {SIDEBAR};
-    border-right: 1px solid {BORDER};
+    background: {sidebar};
+    border-right: 1px solid {border};
 }}
 QLabel#AppName {{
     font-size: 17pt;
     font-weight: 700;
 }}
 QLabel#Muted, QLabel#AppTagline, QLabel#PageSubtitle {{
-    color: {MUTED};
+    color: {muted};
 }}
 QLabel#PageTitle {{
     font-size: 19pt;
@@ -66,56 +156,56 @@ QLabel#SectionTitle {{
     font-weight: 600;
 }}
 QLabel#PrivacyNote {{
-    color: {MUTED};
+    color: {muted};
     font-size: 9pt;
     padding: 10px;
-    background: {SURFACE};
-    border: 1px solid {BORDER};
+    background: {surface};
+    border: 1px solid {border};
     border-radius: 10px;
 }}
 QPushButton {{
-    background: {SURFACE_2};
-    border: 1px solid {BORDER};
+    background: {surface_2};
+    border: 1px solid {border};
     border-radius: 8px;
     padding: 8px 16px;
     font-weight: 600;
 }}
 QPushButton:hover {{
-    background: {SURFACE_3};
+    background: {surface_3};
 }}
 QPushButton:disabled {{
-    color: #5c6577;
-    background: {SURFACE};
-    border-color: {SURFACE_2};
+    color: {disabled};
+    background: {surface};
+    border-color: {surface_2};
 }}
 QPushButton#PrimaryButton {{
-    background: {ACCENT};
-    border: 1px solid {ACCENT};
+    background: {accent};
+    border: 1px solid {accent};
     color: white;
     padding: 10px 22px;
     font-size: 11pt;
 }}
 QPushButton#PrimaryButton:hover {{
-    background: {ACCENT_HOVER};
-    border-color: {ACCENT_HOVER};
+    background: {accent_hover};
+    border-color: {accent_hover};
 }}
 QPushButton#PrimaryButton:pressed {{
-    background: {ACCENT_PRESSED};
+    background: {accent_pressed};
 }}
 QPushButton#PrimaryButton:disabled {{
-    background: #2c3a5e;
-    border-color: #2c3a5e;
-    color: #8a96b5;
+    background: {primary_disabled};
+    border-color: {primary_disabled};
+    color: {primary_disabled_text};
 }}
 QPushButton#GhostButton {{
     background: transparent;
     border: 1px solid transparent;
-    color: {MUTED};
+    color: {muted};
     padding: 6px 10px;
 }}
 QPushButton#GhostButton:hover {{
-    color: {TEXT};
-    background: {SURFACE_2};
+    color: {text};
+    background: {surface_2};
 }}
 QPushButton#NavButton {{
     background: transparent;
@@ -124,101 +214,101 @@ QPushButton#NavButton {{
     padding: 10px 12px;
     text-align: left;
     font-weight: 500;
-    color: {MUTED};
+    color: {muted};
 }}
 QPushButton#NavButton:hover {{
-    background: {SURFACE};
-    color: {TEXT};
+    background: {surface};
+    color: {text};
 }}
 QPushButton#NavButton:checked {{
-    background: {SURFACE_2};
-    color: {TEXT};
+    background: {surface_2};
+    color: {text};
     font-weight: 600;
 }}
 QFrame#Card {{
-    background: {SURFACE};
-    border: 1px solid {BORDER};
+    background: {surface};
+    border: 1px solid {border};
     border-radius: 12px;
 }}
 QFrame#Card:hover {{
-    border-color: {SURFACE_3};
-    background: {SURFACE_2};
+    border-color: {surface_3};
+    background: {surface_2};
 }}
 QFrame#Card[selected="true"] {{
-    border: 1px solid {ACCENT};
-    background: #1c2638;
+    border: 1px solid {accent};
+    background: {card_selected};
 }}
 QFrame#Card[empty="true"] QLabel {{
-    color: #5c6577;
+    color: {disabled};
 }}
 QLabel#CardCount {{
     font-size: 16pt;
     font-weight: 700;
 }}
 QLabel#CardTitle {{
-    color: {MUTED};
+    color: {muted};
     font-weight: 600;
 }}
 QFrame#Banner {{
-    background: #17223a;
-    border: 1px solid #2b3f6b;
+    background: {banner};
+    border: 1px solid {banner_border};
     border-radius: 12px;
 }}
 QFrame#WarningBanner {{
-    background: #2a2316;
-    border: 1px solid #5a4620;
+    background: {warning_bg};
+    border: 1px solid {warning_border};
     border-radius: 10px;
 }}
 QFrame#Panel {{
-    background: {SURFACE};
-    border: 1px solid {BORDER};
+    background: {surface};
+    border: 1px solid {border};
     border-radius: 12px;
 }}
 QLineEdit {{
-    background: {SURFACE};
-    border: 1px solid {BORDER};
+    background: {surface};
+    border: 1px solid {border};
     border-radius: 8px;
     padding: 7px 10px;
-    selection-background-color: {ACCENT};
+    selection-background-color: {accent};
 }}
 QLineEdit:focus {{
-    border-color: {ACCENT};
+    border-color: {accent};
 }}
 QTableView, QTreeWidget {{
-    background: {SURFACE};
-    alternate-background-color: #1d2430;
-    border: 1px solid {BORDER};
+    background: {surface};
+    alternate-background-color: {alt_row};
+    border: 1px solid {border};
     border-radius: 12px;
     gridline-color: transparent;
-    selection-background-color: #26334d;
-    selection-color: {TEXT};
+    selection-background-color: {selection};
+    selection-color: {text};
 }}
 QTableView::item, QTreeWidget::item {{
     padding: 6px 4px;
     border: none;
 }}
 QHeaderView::section {{
-    background: {SURFACE};
-    color: {MUTED};
+    background: {surface};
+    color: {muted};
     border: none;
-    border-bottom: 1px solid {BORDER};
+    border-bottom: 1px solid {border};
     padding: 8px 6px;
     font-weight: 600;
 }}
 QTableCornerButton::section {{
-    background: {SURFACE};
+    background: {surface};
     border: none;
 }}
 QCheckBox::indicator, QTableView::indicator, QTreeWidget::indicator {{
     width: 16px;
     height: 16px;
     border-radius: 4px;
-    border: 1px solid #4a5468;
-    background: {SURFACE_2};
+    border: 1px solid {indicator_border};
+    background: {surface_2};
 }}
 QCheckBox::indicator:checked, QTableView::indicator:checked, QTreeWidget::indicator:checked {{
-    background: {ACCENT};
-    border-color: {ACCENT};
+    background: {accent};
+    border-color: {accent};
     image: url("@CHECK@");
 }}
 QScrollBar:vertical {{
@@ -227,7 +317,7 @@ QScrollBar:vertical {{
     margin: 2px;
 }}
 QScrollBar::handle:vertical {{
-    background: {SURFACE_3};
+    background: {surface_3};
     border-radius: 4px;
     min-height: 30px;
 }}
@@ -237,7 +327,7 @@ QScrollBar:horizontal {{
     margin: 2px;
 }}
 QScrollBar::handle:horizontal {{
-    background: {SURFACE_3};
+    background: {surface_3};
     border-radius: 4px;
     min-width: 30px;
 }}
@@ -248,12 +338,12 @@ QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::su
     height: 0;
 }}
 QStatusBar {{
-    background: {SIDEBAR};
-    color: {MUTED};
-    border-top: 1px solid {BORDER};
+    background: {sidebar};
+    color: {muted};
+    border-top: 1px solid {border};
 }}
 QProgressBar {{
-    background: {SURFACE_2};
+    background: {surface_2};
     border: none;
     border-radius: 5px;
     height: 10px;
@@ -261,17 +351,50 @@ QProgressBar {{
     color: transparent;
 }}
 QProgressBar::chunk {{
-    background: {ACCENT};
+    background: {accent};
     border-radius: 5px;
 }}
 QMessageBox, QProgressDialog, QDialog {{
-    background: {SURFACE};
+    background: {surface};
 }}
 QToolTip {{
-    background: {SURFACE_2};
-    color: {TEXT};
-    border: 1px solid {BORDER};
+    background: {surface_2};
+    color: {text};
+    border: 1px solid {border};
     padding: 6px;
+}}
+QLabel#WarningText {{
+    color: {warning};
+}}
+QLabel#SidebarCaption {{
+    color: {muted};
+    font-size: 9pt;
+    font-weight: 600;
+}}
+QPushButton#SegmentButton {{
+    background: transparent;
+    border: 1px solid {border};
+    border-radius: 0;
+    padding: 5px 0;
+    font-weight: 500;
+    color: {muted};
+}}
+QPushButton#SegmentButton[first="true"] {{
+    border-top-left-radius: 7px;
+    border-bottom-left-radius: 7px;
+}}
+QPushButton#SegmentButton[last="true"] {{
+    border-top-right-radius: 7px;
+    border-bottom-right-radius: 7px;
+}}
+QPushButton#SegmentButton:hover {{
+    color: {text};
+    background: {surface};
+}}
+QPushButton#SegmentButton:checked {{
+    background: {surface_3};
+    color: {text};
+    font-weight: 600;
 }}
 QScrollArea {{
     border: none;
@@ -280,23 +403,30 @@ QScrollArea {{
 """
 
 
-def apply_theme(app: QApplication) -> None:
+def apply_theme(app: QApplication, mode: str = SYSTEM) -> str:
+    """Apply ``mode`` ("system", "light" or "dark"); return the scheme used."""
+    global _active, _desktop_window_lightness
+    if _desktop_window_lightness is None:
+        _desktop_window_lightness = app.palette().color(QPalette.Window).lightness()
+    _active = resolve(mode)
+    c = PALETTES[_active]
     app.setStyle("Fusion")
     palette = QPalette()
-    palette.setColor(QPalette.Window, QColor(BG))
-    palette.setColor(QPalette.WindowText, QColor(TEXT))
-    palette.setColor(QPalette.Base, QColor(SURFACE))
-    palette.setColor(QPalette.AlternateBase, QColor("#1d2430"))
-    palette.setColor(QPalette.Text, QColor(TEXT))
-    palette.setColor(QPalette.Button, QColor(SURFACE_2))
-    palette.setColor(QPalette.ButtonText, QColor(TEXT))
-    palette.setColor(QPalette.Highlight, QColor(ACCENT))
+    palette.setColor(QPalette.Window, QColor(c["bg"]))
+    palette.setColor(QPalette.WindowText, QColor(c["text"]))
+    palette.setColor(QPalette.Base, QColor(c["surface"]))
+    palette.setColor(QPalette.AlternateBase, QColor(c["alt_row"]))
+    palette.setColor(QPalette.Text, QColor(c["text"]))
+    palette.setColor(QPalette.Button, QColor(c["surface_2"]))
+    palette.setColor(QPalette.ButtonText, QColor(c["text"]))
+    palette.setColor(QPalette.Highlight, QColor(c["accent"]))
     palette.setColor(QPalette.HighlightedText, QColor("white"))
-    palette.setColor(QPalette.ToolTipBase, QColor(SURFACE_2))
-    palette.setColor(QPalette.ToolTipText, QColor(TEXT))
-    palette.setColor(QPalette.PlaceholderText, QColor(MUTED))
-    palette.setColor(QPalette.Disabled, QPalette.Text, QColor("#5c6577"))
-    palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor("#5c6577"))
+    palette.setColor(QPalette.ToolTipBase, QColor(c["surface_2"]))
+    palette.setColor(QPalette.ToolTipText, QColor(c["text"]))
+    palette.setColor(QPalette.PlaceholderText, QColor(c["muted"]))
+    palette.setColor(QPalette.Disabled, QPalette.Text, QColor(c["disabled"]))
+    palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(c["disabled"]))
+    palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor(c["disabled"]))
     app.setPalette(palette)
 
     font = app.font()
@@ -304,7 +434,8 @@ def apply_theme(app: QApplication) -> None:
         font.setPointSizeF(10)
     font.setStyleStrategy(QFont.PreferAntialias)
     app.setFont(font)
-    app.setStyleSheet(STYLE_SHEET.replace("@CHECK@", _checkmark_file()))
+    app.setStyleSheet(STYLE_TEMPLATE.format(**c).replace("@CHECK@", _checkmark_file()))
+    return _active
 
 
 def _checkmark_file() -> str:

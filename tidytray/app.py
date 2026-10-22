@@ -11,7 +11,6 @@ from PySide6.QtWidgets import QApplication
 from . import __version__
 from .ui.icons import app_icon
 from .ui.main_window import MainWindow
-from .ui.theme import apply_theme
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -22,9 +21,7 @@ def main(argv: list[str] | None = None) -> int:
     app.setApplicationVersion(__version__)
     app.setDesktopFileName("tidytray")
     app.setWindowIcon(app_icon())
-    apply_theme(app)
-
-    window = MainWindow()
+    window = MainWindow()  # applies the saved theme (System, Light or Dark)
     window.show()
     QTimer.singleShot(0, window.recover_interrupted)
     # Optional: a folder passed on the command line is scanned (never changed).
