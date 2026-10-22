@@ -11,8 +11,8 @@
 AppId={{6F3C2A8E-5B1D-4C7A-9E2F-7A1B3C4D5E6F}
 AppName=TidyTray
 AppVersion={#MyAppVersion}
-AppPublisher=HyderJavaid
-AppCopyright=Copyright (c) 2026 HyderJavaid
+AppPublisher=naOomeow
+AppCopyright=Copyright (c) 2026 naOomeow
 AppPublisherURL=https://github.com/naOomeow/tidytray
 LicenseFile=..\LICENSE
 DefaultDirName={localappdata}\Programs\TidyTray

@@ -204,7 +204,7 @@ To change which extensions go where, edit the lists in `tidytray/categories.py`.
 
 TidyTray is free and open-source software, licensed under the
 [GNU General Public License v3.0 or later](LICENSE) (GPL-3.0-or-later).
-Copyright (c) 2026 HyderJavaid.
+Copyright (c) 2026 naOomeow.
 
 You can use, study, share and change it. If you distribute it, or a modified
 version, you must do so under the same license and make the source code

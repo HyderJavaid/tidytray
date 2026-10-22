@@ -34,7 +34,7 @@ cp packaging/tidytray.png "$PKG/usr/share/icons/hicolor/256x256/apps/tidytray.pn
   echo "Source: https://github.com/naOomeow/tidytray"
   echo
   echo "Files: *"
-  echo "Copyright: 2026 HyderJavaid"
+  echo "Copyright: 2026 naOomeow"
   echo "License: GPL-3+"
   echo " On Debian systems the full license text is in /usr/share/common-licenses/GPL-3."
   echo " Bundled third-party components are listed in /opt/tidytray/THIRD_PARTY_NOTICES.md."
@@ -48,7 +48,7 @@ Priority: optional
 Architecture: ${ARCH}
 Installed-Size: ${INSTALLED_KB}
 Depends: libegl1, libgl1, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libfontconfig1, libdbus-1-3
-Maintainer: HyderJavaid <noreply@github.com>
+Maintainer: naOomeow <noreply@github.com>
 Homepage: https://github.com/naOomeow/tidytray
 Description: Safely organize a cluttered Downloads folder
  Sorts the files directly inside a folder into category folders after you
