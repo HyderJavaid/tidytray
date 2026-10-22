@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tidytray"
+version = "1.0.0"
+description = "Safely organize a cluttered Downloads folder."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["PySide6>=6.5"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.gui-scripts]
+tidytray = "tidytray.app:main"
+
+[tool.setuptools]
+packages = ["tidytray", "tidytray.ui"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

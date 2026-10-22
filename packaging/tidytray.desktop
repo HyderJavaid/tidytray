@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=TidyTray
+Comment=Safely organize your Downloads folder
+Exec=tidytray
+Icon=folder-downloads
+Terminal=false
+Categories=Utility;FileTools;
