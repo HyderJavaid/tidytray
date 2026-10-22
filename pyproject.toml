@@ -27,7 +27,7 @@ dev = ["pytest>=7"]
 tidytray = "tidytray.app:main"
 
 [project.urls]
-Homepage = "https://github.com/HyderJavaid/tidytray"
+Homepage = "https://github.com/naOomeow/tidytray"
 
 [tool.setuptools]
 packages = ["tidytray", "tidytray.ui"]

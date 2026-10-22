@@ -1,6 +1,6 @@
 # Third-party notices
 
-TidyTray itself is free software under the GNU General Public License v3.0 or later ([LICENSE](LICENSE)); its source code is at <https://github.com/HyderJavaid/tidytray>. The ready-made
+TidyTray itself is free software under the GNU General Public License v3.0 or later ([LICENSE](LICENSE)); its source code is at <https://github.com/naOomeow/tidytray>. The ready-made
 packages (installer, portable zip/tar.gz, .deb) also bundle the following
 software, each under its own license:
 

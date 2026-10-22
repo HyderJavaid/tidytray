@@ -137,7 +137,7 @@ Use a throwaway folder, not your real Downloads:
 
 ## Downloads (no Python needed)
 
-Ready-made packages are on the [Releases page](https://github.com/HyderJavaid/tidytray/releases):
+Ready-made packages are on the [Releases page](https://github.com/naOomeow/tidytray/releases):
 
 | File | What it is |
 | --- | --- |

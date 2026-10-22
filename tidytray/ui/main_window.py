@@ -895,7 +895,7 @@ class MainWindow(QMainWindow):
             "<p>TidyTray is free software: you can redistribute it and/or modify it under the terms of the "
             "<a href='https://www.gnu.org/licenses/gpl-3.0.html'>GNU General Public License</a>, version 3 "
             "or (at your option) any later version. It comes with ABSOLUTELY NO WARRANTY.</p>"
-            "<p>Source code: <a href='https://github.com/HyderJavaid/tidytray'>github.com/HyderJavaid/tidytray</a><br>"
+            "<p>Source code: <a href='https://github.com/naOomeow/tidytray'>github.com/naOomeow/tidytray</a><br>"
             "Built with Qt for Python (PySide6), used under the GNU LGPL v3.</p>"
         )
 

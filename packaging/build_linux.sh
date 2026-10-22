@@ -31,7 +31,7 @@ cp packaging/tidytray.png "$PKG/usr/share/icons/hicolor/256x256/apps/tidytray.pn
 {
   echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/"
   echo "Upstream-Name: TidyTray"
-  echo "Source: https://github.com/HyderJavaid/tidytray"
+  echo "Source: https://github.com/naOomeow/tidytray"
   echo
   echo "Files: *"
   echo "Copyright: 2026 HyderJavaid"
@@ -49,7 +49,7 @@ Architecture: ${ARCH}
 Installed-Size: ${INSTALLED_KB}
 Depends: libegl1, libgl1, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libfontconfig1, libdbus-1-3
 Maintainer: HyderJavaid <noreply@github.com>
-Homepage: https://github.com/HyderJavaid/tidytray
+Homepage: https://github.com/naOomeow/tidytray
 Description: Safely organize a cluttered Downloads folder
  Sorts the files directly inside a folder into category folders after you
  review and confirm a plan. Never overwrites or deletes files, and every
