@@ -1,1 +1,1 @@
-Thanks to everyone who helps with TidyTray.
+Hasta la vista, clutter. Thanks to everyone who helps tidy TidyTray.
