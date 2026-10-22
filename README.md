@@ -73,7 +73,7 @@ platform plugin, install the usual Qt runtime packages:
 4. **Organize.** Press **Organize N files** and confirm. A progress window appears; **Stop after this file** stops cleanly at any time.
 5. **Undo.** **Undo last cleanup** (sidebar, History page, or Ctrl+Z) puts the files from the most recent cleanup back. Press it again to undo the cleanup before that.
 
-Keyboard shortcuts: Ctrl+O choose folder, F5 rescan, Ctrl+Z undo last cleanup.
+Keyboard shortcuts: Ctrl+O choose folder, F5 rescan, Ctrl+Z undo last cleanup, F1 about.
 
 **Appearance:** the switch at the bottom of the sidebar picks **System** (follow your desktop's dark/light setting, the default), **Light** or **Dark**. Your choice is remembered in `settings.json` next to the history folder.
 
@@ -180,6 +180,9 @@ Both put their output in `dist/`. `packaging/make_icons.py` regenerates `tidytra
 
 ```
 run_tidytray.py          Start the app
+LICENSE                  GNU GPL v3.0
+THIRD_PARTY_NOTICES.md   Licenses of bundled components
+CHANGELOG.md             Release notes
 tidytray/
   categories.py          Extension → category rules
   scanner.py             Read the immediate contents of one folder
@@ -196,3 +199,17 @@ packaging/               Build scripts, Inno Setup script, icons, Linux .desktop
 ```
 
 To change which extensions go where, edit the lists in `tidytray/categories.py`.
+
+## License
+
+TidyTray is free and open-source software, licensed under the
+[GNU General Public License v3.0 or later](LICENSE) (GPL-3.0-or-later).
+Copyright (c) 2026 HyderJavaid.
+
+You can use, study, share and change it. If you distribute it, or a modified
+version, you must do so under the same license and make the source code
+available. The packaged builds also include Qt for Python (PySide6, LGPL v3)
+and other components listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Every package contains both files, the Windows installer shows the license
+before installing, and the app's **About** button (History page, or F1) shows
+the version and license.

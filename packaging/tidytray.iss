@@ -11,7 +11,10 @@
 AppId={{6F3C2A8E-5B1D-4C7A-9E2F-7A1B3C4D5E6F}
 AppName=TidyTray
 AppVersion={#MyAppVersion}
-AppPublisher=TidyTray
+AppPublisher=HyderJavaid
+AppCopyright=Copyright (c) 2026 HyderJavaid
+AppPublisherURL=https://github.com/HyderJavaid/tidytray
+LicenseFile=..\LICENSE
 DefaultDirName={localappdata}\Programs\TidyTray
 DefaultGroupName=TidyTray
 DisableProgramGroupPage=yes

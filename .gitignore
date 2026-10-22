@@ -7,3 +7,4 @@ build/
 dist/
 *.spec.bak
 TidyTray.spec
+*.egg-info/

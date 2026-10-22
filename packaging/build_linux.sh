@@ -11,6 +11,9 @@ ARCH="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
 pyinstaller --noconfirm --clean --windowed --name TidyTray \
   --icon packaging/tidytray.png run_tidytray.py
 
+# License texts travel with every build.
+cp LICENSE THIRD_PARTY_NOTICES.md README.md dist/TidyTray/
+
 # Portable: unpack anywhere and run ./TidyTray/TidyTray. No root needed.
 cp packaging/tidytray.png dist/TidyTray/tidytray.png
 tar -C dist -czf "dist/TidyTray-${VERSION}-linux-x86_64-portable.tar.gz" TidyTray
@@ -19,11 +22,23 @@ tar -C dist -czf "dist/TidyTray-${VERSION}-linux-x86_64-portable.tar.gz" TidyTra
 PKG="build/deb/tidytray_${VERSION}_${ARCH}"
 rm -rf "$PKG"
 mkdir -p "$PKG/DEBIAN" "$PKG/opt" "$PKG/usr/bin" \
-  "$PKG/usr/share/applications" "$PKG/usr/share/icons/hicolor/256x256/apps"
+  "$PKG/usr/share/applications" "$PKG/usr/share/icons/hicolor/256x256/apps" \
+  "$PKG/usr/share/doc/tidytray"
 cp -a dist/TidyTray "$PKG/opt/tidytray"
 ln -s /opt/tidytray/TidyTray "$PKG/usr/bin/tidytray"
 sed 's/^Icon=.*/Icon=tidytray/' packaging/tidytray.desktop > "$PKG/usr/share/applications/tidytray.desktop"
 cp packaging/tidytray.png "$PKG/usr/share/icons/hicolor/256x256/apps/tidytray.png"
+{
+  echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/"
+  echo "Upstream-Name: TidyTray"
+  echo "Source: https://github.com/HyderJavaid/tidytray"
+  echo
+  echo "Files: *"
+  echo "Copyright: 2026 HyderJavaid"
+  echo "License: GPL-3+"
+  echo " On Debian systems the full license text is in /usr/share/common-licenses/GPL-3."
+  echo " Bundled third-party components are listed in /opt/tidytray/THIRD_PARTY_NOTICES.md."
+} > "$PKG/usr/share/doc/tidytray/copyright"
 INSTALLED_KB="$(du -sk "$PKG" | cut -f1)"
 cat > "$PKG/DEBIAN/control" <<CONTROL
 Package: tidytray
@@ -33,7 +48,8 @@ Priority: optional
 Architecture: ${ARCH}
 Installed-Size: ${INSTALLED_KB}
 Depends: libegl1, libgl1, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libfontconfig1, libdbus-1-3
-Maintainer: TidyTray <noreply@example.com>
+Maintainer: HyderJavaid <noreply@github.com>
+Homepage: https://github.com/HyderJavaid/tidytray
 Description: Safely organize a cluttered Downloads folder
  Sorts the files directly inside a folder into category folders after you
  review and confirm a plan. Never overwrites or deletes files, and every

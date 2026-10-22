@@ -123,6 +123,8 @@ jobs:
           name: TidyTray ${{ steps.tag.outputs.tag }}
           files: artifacts/*
           body: |
+            TidyTray is free software under the GNU General Public License v3.0 or later. Each package includes `LICENSE` and `THIRD_PARTY_NOTICES.md`; the source code for this release is attached below.
+
             **Windows**
             - `TidyTray-…-windows-setup.exe`: installer. Installs for your user only (no administrator rights), adds a Start menu entry, and can be removed from *Settings → Apps*.
             - `TidyTray-…-windows-x64-portable.zip`: unzip anywhere and run `TidyTray\TidyTray.exe`. Nothing is installed.

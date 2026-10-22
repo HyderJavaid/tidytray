@@ -164,3 +164,12 @@ def test_theme_switch_light_dark_system_and_remembered(app, window, downloads, i
     finally:
         second.close()
         second.deleteLater()
+
+
+def test_about_shows_version_and_gpl_license():
+    from tidytray import __license__, __version__
+
+    text = MainWindow.about_text()
+    assert __version__ in text
+    assert "GNU General Public License" in text and "version 3" in text
+    assert __license__ == "GPL-3.0-or-later"

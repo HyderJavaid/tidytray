@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .. import __copyright__, __version__
 from ..categories import CATEGORIES
 from ..formatting import human_size, plural
 from ..history import History, Operation
@@ -100,6 +101,7 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence.Open, self, activated=self.choose_folder)
         QShortcut(QKeySequence.Refresh, self, activated=self.rescan)
         QShortcut(QKeySequence.Undo, self, activated=self.undo_last)
+        QShortcut(QKeySequence.HelpContents, self, activated=self.show_about)
 
         hints = QGuiApplication.styleHints()
         if hasattr(hints, "colorSchemeChanged"):
@@ -405,6 +407,10 @@ class MainWindow(QMainWindow):
         open_dir.setObjectName("GhostButton")
         open_dir.clicked.connect(self._open_history_folder)
         header.actions.addWidget(open_dir)
+        about = QPushButton("About")
+        about.setObjectName("GhostButton")
+        about.clicked.connect(self.show_about)
+        header.actions.addWidget(about)
         layout.addWidget(header)
 
         self.history_stack = QStackedWidget()
@@ -879,6 +885,22 @@ class MainWindow(QMainWindow):
         self.history_stack.setCurrentIndex(1 if ops else 0)
         self.history_hint.setText(f"History is stored only on this computer, in {self.history.directory}")
         self._update_undo_buttons()
+
+    @staticmethod
+    def about_text() -> str:
+        return (
+            f"<h3>TidyTray {__version__}</h3>"
+            "<p>Safely organize a cluttered Downloads folder.</p>"
+            f"<p>{__copyright__}</p>"
+            "<p>TidyTray is free software: you can redistribute it and/or modify it under the terms of the "
+            "<a href='https://www.gnu.org/licenses/gpl-3.0.html'>GNU General Public License</a>, version 3 "
+            "or (at your option) any later version. It comes with ABSOLUTELY NO WARRANTY.</p>"
+            "<p>Source code: <a href='https://github.com/HyderJavaid/tidytray'>github.com/HyderJavaid/tidytray</a><br>"
+            "Built with Qt for Python (PySide6), used under the GNU LGPL v3.</p>"
+        )
+
+    def show_about(self) -> None:
+        QMessageBox.about(self, "About TidyTray", self.about_text())
 
     def _open_history_folder(self) -> None:
         self.history.ensure()

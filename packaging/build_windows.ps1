@@ -10,6 +10,9 @@ $version = python -c "import tidytray; print(tidytray.__version__)"
 pyinstaller --noconfirm --clean --windowed --name TidyTray --icon packaging\tidytray.ico run_tidytray.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
 
+# License texts travel with every build.
+Copy-Item LICENSE, THIRD_PARTY_NOTICES.md, README.md dist\TidyTray\
+
 # Portable: unzip anywhere and run TidyTray\TidyTray.exe. No install, no admin.
 Compress-Archive -Path dist\TidyTray -DestinationPath "dist\TidyTray-$version-windows-x64-portable.zip" -Force
 
